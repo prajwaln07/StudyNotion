@@ -19,11 +19,10 @@ exports.resetPasswordToken = async (req, res) => {
 			{ email: email },
 			{
 				token: token,
-				resetPasswordExpires: Date.now() + 3600000,
+				resetPasswordExpires: Date.now() + 5*60*1000,
 			},
 			{ new: true }
 		);
-		console.log("DETAILS", updatedDetails);
 
 		const url = `http://localhost:3000/update-password/${token}`;
 
