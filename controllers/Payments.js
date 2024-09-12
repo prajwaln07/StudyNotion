@@ -33,14 +33,108 @@ if(courseToBeEnrolledIn.studentsEnrolled.includes(uid)){
     })
 }
 
-
-
 }catch(err){
 console.log("got error while feching the course inside payment creation ",err);
 return res.status(500).json({
     success:false,
     message:err,
 })
+}
+
+const amount=courseToBeEnrolledIn.price;
+const currency="INR";
+const options ={
+    amount : amount*100,
+    currency : currency,
+    receipt:Math.random(Data.now()).toString(),
+    notes:{
+        courseId:courseID,
+        userId
+    }
+};
+
+try{
+const paymentResponse=await instance.orders.create(options);
+// console.log(paymentResponse);
+return res.json({
+ success:true,
+ courseName:courseToBeEnrolledIn.courseName,
+ courseDescription:courseToBeEnrolledIn.courseDescription,
+ data: paymentResponse,
+
+})
+}
+catch(err){
+console.log(err);
+return res.json({
+    success:false,
+    messsage:`could not initiate order ${err} `,
+})
+}
+
+};
+
+exports.verifySignature =async(req,res)=>{
+    const webhookServer ="12345";  
+    const signature=req.headers['x-razorpay-signature'];
+
+    const shasum= crypto.createHmac('sha256',webhookServer);
+    shasum.update(JSON.stringify(req.body));
+    const digest=shasum.digest('hex');
+
+    if(signature == digest){
+    console.log("payment is Authorised");
+    
+    const {courseId,userId}=req.body.payload.entity.notes;
+    try{
+        const enrolledCourse=await Course.findByIdAndUpdate(
+            {courseId},
+            {
+                $push:{
+                    studentsEnrolled:userId,
+                }
+            },
+            {new:true},
+        );
+
+        const updatedUser=await User.findByIdAndUpdate(
+            {userId},
+            {
+                $push:{
+                    courses:courseId,
+                }
+            },
+            {new:true},
+        );
+
+if(!enrolledCourse || !updatedUser ){
+return res.status(500).json({
+    success:false,
+    message:`problem with payment verification`,
+})
+}
+
+const mailResponse= await mailSender(updatedUser.email,"Congratulation, you are onboarded on studyNotion Course",courseEnrollmentEmail);
+
+return res.status(200).json({
+    success:true,
+    message:"signature verified and course added",
+})
+
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:`got error while payment verification ${err}`,
+        })
+    }
+    }
+
+else{
+    return res.status(400).json({
+        success:false,
+        message:`Invalid signature `,
+    })
 }
 
 };
