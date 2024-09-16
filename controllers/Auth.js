@@ -4,6 +4,9 @@ const OTPGenerator=require('otp-generator');
 const OTP = require('../models/OTP');
 const  bcrypt= require('bcrypt');
 const jwt = require("jsonwebtoken");
+const Profile=require('../models/Profile');
+const mailSender=require('../utils/mailSender');
+const {passwordUpdated}=require('./../mail/templates/passwordUpdate');
 
 
 //sendOTP
@@ -38,9 +41,9 @@ while(result){
 }
 
 const otpPayload={email,otp};
-
+// console.log("otpPayload ->>>>>>>>>");
 const otpBody=await OTP.create(otpPayload);
-console.log(otpBody);
+
 
 res.status(200).json({
     success:true,
@@ -51,7 +54,7 @@ res.status(200).json({
     }
     catch(err){
 
-console.log("got erroe while sending OTP ",err);
+console.log("got error while sending OTP ",err);
 
     }
     
@@ -93,7 +96,7 @@ exports.signup = async (req, res) => {
         })
       }
   
-      const existingUser = await User.findOne({ email })
+      const existingUser = await user.findOne({ email })
       if (existingUser) {
         return res.status(400).json({
           success: false,
@@ -133,7 +136,7 @@ exports.signup = async (req, res) => {
         contactNumber: null,
       })
 
-      const user = await User.create({
+      const newuser = await user.create({
         firstName,
         lastName,
         email,
@@ -147,7 +150,7 @@ exports.signup = async (req, res) => {
   
       return res.status(200).json({
         success: true,
-        user,
+        newuser,
         message: "User registered successfully",
       })
     } catch (error) {
@@ -172,26 +175,31 @@ exports.login = async (req, res) => {
         })
       }
   
-      const user = await User.findOne({ email }).populate("additionalDetails")
+      const User = await user.findOne({ email }).populate("additionalDetails")
   
-      if (!user) {
+      if (!User) {
         return res.status(401).json({
           success: false,
           message: `User is not Registered with Us Please SignUp to Continue`,
         })
       }
-  
-      if (await bcrypt.compare(password, user.password)) {
+ 
+      const payLoad={
+        email: User.email,
+         id: User._id, 
+         role: User.accountType
+      }
+      if (await bcrypt.compare(password, User.password)) {
         const token = jwt.sign(
-          { email: user.email, id: user._id, role: user.role },
+          payLoad,
           process.env.JWT_SECRET,
           {
             expiresIn: "24h",
           }
         )
   
-        user.token = token
-        user.password = undefined
+        User.token = token
+        User.password = undefined
 
         const options = {
           expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
@@ -201,7 +209,7 @@ exports.login = async (req, res) => {
         res.cookie("token", token, options).status(200).json({
           success: true,
           token,
-          user,
+          User,
           message: `User Login Success`,
         })
       }
@@ -225,8 +233,8 @@ exports.login = async (req, res) => {
 //change Password 
 exports.changePassword = async (req, res) => {
     try {
-      const userDetails = await User.findById(req.user.id)
-  
+      const userDetails = await user.findById(req.user.id)
+  // console.log("->->->",req.user);
       // Get old password, new password, and confirm new password from req.body
       const { oldPassword, newPassword } = req.body
   
@@ -244,7 +252,7 @@ exports.changePassword = async (req, res) => {
   
       // Update password
       const encryptedPassword = await bcrypt.hash(newPassword, 10)
-      const updatedUserDetails = await User.findByIdAndUpdate(
+      const updatedUserDetails = await user.findByIdAndUpdate(
         req.user.id,
         { password: encryptedPassword },
         { new: true }
