@@ -7,6 +7,7 @@ const CourseProgress = require("../models/CourseProgress")
 const { uploadImageToCloudinary } = require("../utils/imageUploader")
 
 
+
 exports.createCourse=async(req,res)=>{
     try{
         const userId = req.user.id
@@ -20,21 +21,29 @@ exports.createCourse=async(req,res)=>{
           category,
           status,
           instructions: _instructions,
-        } = req.body
-        const thumbnail = req.files.thumbnailImage
+        } = req.body;
+        
+        let thumbnail ;
+        if(req.files.thumbnailImage)
+        thumbnail= req.files.thumbnailImage
+      else
+      thumbnail="";
+  
+    
+console.log(courseName,"  ",courseDescription,"  ",whatYouWillLearn,"   ",price,"   ",_tag,"   ",category,"   ",_instructions);
+
         if (
             !courseName ||
             !courseDescription ||
             !whatYouWillLearn ||
             !price ||
-            !tag.length ||
-            !thumbnail ||
+            !_tag.length ||
             !category ||
             !instructions.length
           ) {
             return res.status(400).json({
               success: false,
-              message: "All Fields are Mandatory",
+              message: "All Fields are Mandatory....",
             })
           }
 
@@ -68,11 +77,11 @@ exports.createCourse=async(req,res)=>{
             instructor: instructorDetails._id,
             whatYouWillLearn: whatYouWillLearn,
             price,
-            tag,
+            _tag,
             category: categoryDetails._id,
             thumbnail: thumbnailImage.secure_url,
             status: status,
-            instructions,
+            _instructions,
           })
       
 let updatedUSer=await User.findByIdAndUpdate(
@@ -105,7 +114,7 @@ res.status(200).json({
         res.status(500).json({
             success: false,
             message: "Failed to create course",
-            error: error.message,
+            error: err.message,
           })
     }
 

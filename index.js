@@ -7,11 +7,13 @@ const cors=require('cors');
 const {uploadImageToCloudinary} =require('./utils/imageUploader')
 const fileUpload=require('express-fileupload');
 
+
 const PORT=  3001;
 connectWithDB(); 
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 app.use(
     fileUpload({
         useTempFiles:true,
@@ -40,7 +42,7 @@ app.use("/api/v1/contact",contactUSRoutes);
 app.get("/",(req,res)=>{
     return res.json({
         success:true,
-        message:"server is ruuning ....",
+        message:"server is ruuning ",
     })
 })
 
