@@ -1,7 +1,7 @@
 import axios from "axios"
 
 export const axiosInstance = axios.create({});
-
+// console.log("axiosInstance",axiosInstance);
 export const apiConnector = (method, url, bodyData, headers, params) => {
     return axiosInstance({
         method:`${method}`,
